@@ -1,5 +1,9 @@
 # PulseLex
 
+<p align="center">
+  <img src="pLex-SocialPreview.png" alt="PulseLex" width="100%">
+</p>
+
 A Morse-inspired fixed-length alphabet with systematic Hamming (9,5) and Extended SECDED (10,5) forward error correction.
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](pyproject.toml)
