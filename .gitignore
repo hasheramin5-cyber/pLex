@@ -40,3 +40,6 @@ Thumbs.db
 *.run.xml
 *.synctex.gz
 *.toc
+
+# Generated audio and telemetry artifacts
+*.wav
