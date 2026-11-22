@@ -17,6 +17,13 @@ def test_hamming_distance():
     assert hamming_distance([0, 1, 1], [1, 1, 0]) == 2
 
 
+def test_hamming_distance_unequal_length():
+    with pytest.raises(ValueError, match="must have equal length"):
+        hamming_distance([0, 1], [1, 1, 0])
+
+
 def test_invalid_probability():
     with pytest.raises(ValueError):
         transmit([0, 1], 1.2)
+    with pytest.raises(ValueError):
+        transmit([0, 1], -0.1)

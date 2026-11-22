@@ -1,5 +1,6 @@
 """Tests for Acoustic CW Waveform Synthesizer."""
 
+import pytest
 import wave
 from pathlib import Path
 from pulselex.audio import (
@@ -28,17 +29,33 @@ def test_synthesize_tone_sample_count_and_amplitude():
     assert abs(samples[-1]) < 0.05
 
 
+def test_synthesize_tone_zero_or_negative_duration():
+    assert synthesize_tone(750.0, 0.0) == []
+    assert synthesize_tone(750.0, -0.5) == []
+
+
+def test_synthesize_tone_invalid_parameters():
+    with pytest.raises(ValueError, match="frequency_hz must be positive"):
+        synthesize_tone(-100.0, 0.1)
+    with pytest.raises(ValueError, match="sample_rate must be positive"):
+        synthesize_tone(750.0, 0.1, sample_rate=0)
+    with pytest.raises(ValueError, match="amplitude must be between"):
+        synthesize_tone(750.0, 0.1, amplitude=1.5)
+
+
 def test_synthesize_silence():
     sample_rate = 16000
     duration_s = 0.05
     silence = synthesize_silence(duration_s, sample_rate=sample_rate)
     assert len(silence) == int(duration_s * sample_rate)
     assert all(s == 0.0 for s in silence)
+    assert synthesize_silence(0.0) == []
+    with pytest.raises(ValueError, match="sample_rate must be positive"):
+        synthesize_silence(0.1, sample_rate=-1)
 
 
 def test_pulse_stream_to_audio():
     sample_rate = 8000
-    # Stream with dot, dash, space
     stream = ".- "
     samples = pulse_stream_to_audio(
         stream,
@@ -52,6 +69,11 @@ def test_pulse_stream_to_audio():
     assert any(s != 0.0 for s in samples)
 
 
+def test_pulse_stream_to_audio_invalid_dot_duration():
+    with pytest.raises(ValueError, match="dot_duration_s must be positive"):
+        pulse_stream_to_audio("...", dot_duration_s=0.0)
+
+
 def test_export_wav_file_structure(tmp_path: Path):
     sample_rate = 16000
     samples = [0.1 * i for i in range(10)]
@@ -61,7 +83,6 @@ def test_export_wav_file_structure(tmp_path: Path):
     assert exported.exists()
     assert exported.stat().st_size > 44  # WAV header is 44 bytes
 
-    # Read back using wave module to verify standard compliance
     with wave.open(str(exported), "rb") as wav_in:
         assert wav_in.getnchannels() == 1  # Mono
         assert wav_in.getsampwidth() == 2  # 16-bit
