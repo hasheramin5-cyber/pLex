@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pulselex"
+version = "0.1.0"
+description = "A Morse-inspired fixed-length alphabet with Hamming error correction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "PulseLex Research Prototype"}]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+pulselex = "pulselex.cli:main"
+
+[tool.setuptools]
+packages = ["pulselex"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

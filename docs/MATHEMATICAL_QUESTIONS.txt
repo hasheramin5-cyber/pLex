@@ -1,0 +1,58 @@
+PULSELEX: MATHEMATICAL RESEARCH QUESTIONS
+=========================================
+
+Q1. Alphabet capacity
+Five payload bits represent how many unique values?
+Derive the answer using 2^k. How many of those values remain after assigning
+26 letters, one space, and three punctuation symbols?
+
+Q2. Redundancy overhead
+PulseLex maps 5 payload bits to 9 transmitted bits.
+Calculate:
+  a) the number of redundant bits per symbol;
+  b) the percentage overhead relative to the payload;
+  c) the code rate k/n.
+Explain why overhead and code rate are different ways to describe the same
+trade-off.
+
+Q3. Hamming distance
+The minimum Hamming distance of this code is 3.
+Explain why a code with minimum distance d_min can correct
+floor((d_min - 1)/2) errors and detect up to d_min - 1 errors.
+How many errors can PulseLex guarantee to correct?
+
+Q4. Uncoded symbol error probability
+For a five-bit uncoded symbol transmitted over a binary symmetric channel
+with independent bit error probability p, derive:
+  P(symbol error) = 1 - (1-p)^5.
+Evaluate it at p = 0.01.
+
+Q5. Hamming-coded block failure
+For a (9,5) single-error-correcting code, a block is guaranteed to decode
+correctly when zero or one bit flips.
+Under independent bit flips, derive the probability that two or more of the
+nine bits flip:
+  P(2 or more errors) = 1 - (1-p)^9 - 9p(1-p)^8.
+At p = 0.01, calculate this probability. Why is it an upper bound on
+uncorrectable/miscorrected events rather than an exact decoded symbol-error
+probability?
+
+Q6. Transmission cost
+Compare 5 pulse slots per uncoded symbol with 9 pulse slots per coded symbol.
+What is the relative increase in transmission slots? If a message contains
+120 symbols, how many additional slots are required, ignoring start/end markers?
+
+Q7. Experiment design
+How many Monte Carlo trials would you choose to estimate a symbol error rate
+near 0.001? What confidence interval would you report? Explain how random
+seed, sample size, and channel model affect reproducibility.
+
+Q8. Research extension
+How would the design change if errors occur in bursts rather than independently?
+Propose one experiment using interleaving, a CRC, or a stronger error-correcting
+code. Define the independent variable, dependent variable, and control.
+
+Q9. Critical thinking
+Morse uses variable-length symbols and timing gaps. PulseLex uses fixed-length
+blocks and extra parity bits. Which is better depends on the channel and
+objective. Define at least two use cases where one design may be preferable.

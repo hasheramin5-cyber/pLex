@@ -1,0 +1,51 @@
+PULSELEX: RESEARCH BRIEF
+========================
+
+TOPIC
+A Morse-inspired fixed-length alphabet with single-bit error correction.
+
+PROBLEM
+International Morse represents letters using variable-length dot/dash sequences.
+PulseLex investigates a different design: represent each symbol with a fixed-size
+binary payload, render bits as dots and dashes, and add redundancy for error
+correction. Fixed-size blocks simplify segmentation once synchronization is known.
+
+PROPOSED DESIGN
+1. Use five payload bits to represent 32 symbols.
+2. Map 0 to dot and 1 to dash.
+3. Add four Hamming parity bits to form a (9,5) block.
+4. Reserve symbol values for space, punctuation, start, and end markers.
+5. Decode by computing the syndrome and correcting one flipped bit.
+
+RESEARCH QUESTION
+Can the proposed (9,5) PulseLex code reduce symbol errors under an independent
+bit-flip channel compared with uncoded five-bit symbols, and what is the
+redundancy cost?
+
+HYPOTHESES
+H1: For sufficiently small bit-error probabilities, the Hamming-coded design
+will have a lower symbol error rate than uncoded five-bit symbols.
+H2: The coded design will require 80% more pulse units per symbol (9 rather
+than 5), before accounting for framing and timing overhead.
+H3: At high error rates, single-error correction will become insufficient and
+may miscorrect blocks containing multiple errors.
+
+METHOD
+Use a seeded Monte Carlo simulation. For each channel probability, generate
+random 5-bit symbols, transmit both raw payloads and Hamming (9,5) codewords
+through an independent bit-flip channel, decode, and estimate symbol error rate.
+Report trial count, seed, and probabilities so the experiment can be repeated.
+
+IMPORTANT LIMITATIONS
+The experiment is a simplified binary symmetric channel model. It does not
+model burst errors, pulse-duration distortion, clock drift, synchronization
+failure, real radio propagation, or human decoding. The protocol assumes
+correct nine-pulse block boundaries. Results should not be generalized to
+real-world radio performance without further experiments.
+
+NOVELTY BOUNDARY
+Morse coding and Hamming coding are established techniques. PulseLex is a
+small integration and evaluation exercise. No claim is made that its component
+coding theory is new. A stronger research contribution would require a
+carefully justified comparison, realistic channel model, and independent
+benchmarking against established coding schemes.

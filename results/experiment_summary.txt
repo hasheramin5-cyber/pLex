@@ -1,0 +1,12 @@
+PULSELEX REFERENCE EXPERIMENT
+Trials per channel probability: 50,000
+Random seed: 7
+Channel: independent bit flips (binary symmetric channel)
+
+p	uncoded_SER	hamming_9_5_SER	corrected_blocks
+0.001	0.004740	0.000000	421
+0.005	0.024440	0.001000	2183
+0.010	0.048720	0.003260	4329
+0.020	0.095600	0.012260	8303
+0.050	0.229600	0.068120	17175
+0.100	0.409200	0.211820	26360
