@@ -1,15 +1,15 @@
 # PulseLex
 
-A Morse-inspired fixed-length alphabet with systematic Hamming (9,5) forward error correction.
+A Morse-inspired fixed-length alphabet with systematic Hamming (9,5) and Extended SECDED (10,5) forward error correction.
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](pyproject.toml)
 [![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue.svg)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-9%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen.svg)](tests/)
 
-PulseLex is an experimental telecommunications and coding-theory research prototype. It investigates replacing the variable-length, timing-dependent characters of International Morse code with uniform five-bit payloads, rendering binary states as dot and dash pulses, and applying a shortened systematic Hamming (9,5) block code to correct single-bit errors within every nine-pulse character block.
+PulseLex is an experimental telecommunications and coding-theory research prototype. It investigates replacing the variable-length, timing-dependent characters of International Morse code with uniform five-bit payloads, rendering binary states as dot and dash pulses, and applying linear block codes to guarantee single-bit error correction and double-bit error detection.
 
-It is an educational research artifact, not a replacement for operational Morse signaling and not a cryptographic cipher.
+It is an educational and micro-telemetry research artifact, not a replacement for operational high-bandwidth RF signaling and not a cryptographic cipher.
 
 ---
 
@@ -18,22 +18,26 @@ It is an educational research artifact, not a replacement for operational Morse 
 Traditional International Morse code (ITU-R Recommendation M.1677-1) optimizes for human manual keying over clear channels. However, it relies heavily on temporal precision (1-unit element gaps, 3-unit character gaps, 7-unit word gaps) and provides no native forward error correction. Timing jitter or channel noise can cause framing loss across entire words.
 
 PulseLex explores an alternative design:
-- Every character occupies an invariant nine-pulse block.
+- Every character occupies an invariant nine-pulse (or ten-pulse SECDED) block.
 - Character framing is deterministic once stream synchronization is established.
 - Isolated single-bit flips introduced during transmission are mathematically detected and corrected.
-- The protocol incurs an 80% redundancy overhead (9 transmitted pulses vs. 5 uncoded bits) in exchange for significant symbol error rate reduction under moderate noise.
+- The protocol provides an Extended Hamming (10,5) SECDED mode that detects double-bit errors to eliminate miscorrections.
+- Built-in continuous bitstream sliding-window synchronization recovers frame lock over unsegmented pulse streams.
+- Zero-dependency acoustic CW audio synthesis generates clean, raised-cosine shaped WAV tone bursts for over-the-air speaker-to-microphone air-gap transmission.
 
 ---
 
 ## Key Features
 
-- **Shortened Hamming (9,5) Codec:** Systematic block code using four parity bits to protect five data bits, guaranteeing single-bit error correction ($d_{\min} = 3$).
+- **Shortened Hamming (9,5) & SECDED (10,5) Codec:** Systematic block code using four parity bits to protect five data bits ($d_{\min} = 3$), with an optional 10th overall parity bit providing Single Error Correction and Double Error Detection (SECDED, $d_{\min} = 4$).
+- **Continuous Bitstream Preamble Synchronizer:** Sliding-window correlator locks onto raw, unsegmented pulse streams without relying on artificial whitespace separation.
+- **Acoustic CW Waveform Synthesizer:** Standard-library audio keyer exports 16-bit mono PCM WAV files with smooth Hann-windowed rise/fall envelopes to prevent spectral splatter and key clicks.
 - **32-Symbol Alphabet:** Comprehensive mapping of 26 uppercase English letters, space, three punctuation marks, and dedicated start/end framing markers.
-- **Defensive Syndrome Decoding:** Detects when error patterns fall outside the single-bit correction region (syndromes 10 through 15 in shortened space) to avoid erroneous bit alteration.
+- **Defensive Syndrome Decoding:** Distinguishes between zero errors, single-bit errors, and uncorrectable double-bit errors, raising `DoubleErrorDetected` rather than corrupting uncorrupted bits.
 - **Binary Symmetric Channel Simulator:** Configurable Bernoulli bit-flip channel model for stochastic transmission experiments.
 - **Reproducible Monte Carlo Benchmarks:** Automated simulation harness reporting empirical symbol error rates against uncoded baselines to CSV.
 - **Academic Manuscript:** Complete LaTeX research paper (`paper/pulselex_paper.tex`) with formal derivations, TikZ diagrams, and BibTeX citations.
-- **Zero Runtime Dependencies:** Built entirely with the Python Standard Library.
+- **Zero External Dependencies:** Built entirely with the Python Standard Library.
 
 ---
 
@@ -57,21 +61,27 @@ A binary `0` is rendered as a dot (`.`), and a binary `1` is rendered as a dash 
 
 ## Technical Architecture
 
-Codewords use systematic 1-based indexing from 1 to 9. Parity bits are assigned to powers of two (positions 1, 2, 4, 8), and five payload bits occupy the remaining positions (3, 5, 6, 7, 9):
+Codewords use systematic 1-based indexing from 1 to 9 (or 10 in SECDED mode). Parity bits are assigned to powers of two (positions 1, 2, 4, 8), and five payload bits occupy the remaining positions (3, 5, 6, 7, 9):
 
 ```text
+Standard (9,5):
 Codeword Index:   1    2    3    4    5    6    7    8    9
 Content Type:    p1   p2   d1   p4   d2   d3   d4   p8   d5
 Bit Allocation: [ Parity ] [Data] [Parity] [   Data   ] [Parity] [Data]
+
+Extended SECDED (10,5):
+Codeword Index:   1    2    3    4    5    6    7    8    9   10
+Content Type:    p1   p2   d1   p4   d2   d3   d4   p8   d5  p0 (Overall)
 ```
 
-Under even parity, the four check equations are:
+Under even parity, the check equations are:
 
 $$\begin{aligned}
 p_1 &= d_1 \oplus d_2 \oplus d_4 \oplus d_5 \\
 p_2 &= d_1 \oplus d_3 \oplus d_4 \\
 p_4 &= d_2 \oplus d_3 \oplus d_4 \\
-p_8 &= d_5
+p_8 &= d_5 \\
+p_0 &= \bigoplus_{i=1}^9 c_i \quad \text{(SECDED mode only)}
 \end{aligned}$$
 
 ### End-to-End Workflow
@@ -80,12 +90,12 @@ p_8 &= d_5
 flowchart LR
     A[Text Input] --> B[Normalize & Frame]
     B --> C[5-Bit Payloads]
-    C --> D[Hamming 9,5 Encoder]
+    C --> D[Hamming 9,5 / 10,5 SECDED]
     D --> E[Pulse Stream .-.-]
-    E --> F[Channel Noise BSC]
-    F --> G[Syndrome Calculator]
-    G --> H[Single-Bit Corrector]
-    H --> I[Strip Markers]
+    E --> F[Continuous Synchronizer / Audio WAV]
+    F --> G[Channel Noise / Air Gap]
+    G --> H[Syndrome & Parity Validator]
+    H --> I[Single-Bit Corrector / Double Error Guard]
     I --> J[Recovered Text]
 ```
 
@@ -94,9 +104,12 @@ flowchart LR
 ## Mathematical Foundations
 
 - **Code Rate ($R$):**
-  $$R = \frac{k}{n} = \frac{5}{9} \approx 0.556$$
+  $$R_{(9,5)} = \frac{5}{9} \approx 0.556, \quad R_{(10,5)} = \frac{5}{10} = 0.500$$
 - **Redundancy Overhead:**
-  $$\frac{n - k}{k} \times 100\% = \frac{9 - 5}{5} \times 100\% = 80\%$$
+  $$\text{Overhead}_{(9,5)} = \frac{9 - 5}{5} \times 100\% = 80\%, \quad \text{Overhead}_{(10,5)} = 100\%$$
+- **Minimum Hamming Distance & Error Bounds:**
+  - Standard $(9,5)$: $d_{\min} = 3 \implies t = 1$ bit correction.
+  - Extended $(10,5)$: $d_{\min} = 4 \implies t = 1$ bit correction, $2$ bits uncorrectable double-error detection (SECDED).
 - **Uncoded Symbol Error Rate (SER):** For independent bit-flip probability $p$:
   $$P_{\text{uncoded}} = 1 - (1 - p)^5$$
   At $p = 0.01$, $P_{\text{uncoded}} \approx 0.04901$ (4.90%).
@@ -128,51 +141,55 @@ python -m pip install -e ".[dev]"
 
 ## Quick Start & Usage
 
-### Command-Line Interface
+### 1. Command-Line Interface
 
-#### Encode Text to Pulses
+#### Standard & SECDED Encoding
 ```bash
+# Standard 9-bit encoding
 pulselex encode "HELLO, WORLD?"
+
+# Extended 10-bit SECDED encoding (Double-Error Detection)
+pulselex encode --extended "HELLO, WORLD?"
 ```
 
-Output:
-```text
--------.. .....---- .-.-.-... --..-.--- --..-.--- ...----.. ..-.--... -.-.-.-.. .--..--.. ...----.. .--....-- --..-.--- .-.-..--- -.-.--.-- .--------
-```
-*(Block 1 is the START marker `-------..`; block 15 is the END marker `.--------`.)*
-
-#### Decode Pulses to Text
+#### Decoding Space-Separated Blocks
 ```bash
 pulselex decode "-------.. .....---- .-.-.-... --..-.--- --..-.--- ...----.. ..-.--... -.-.-.-.. .--..--.. ...----.. .--....-- --..-.--- .-.-..--- -.-.--.-- .--------"
 ```
 
-Output:
-```text
-HELLO, WORLD?
-```
-
-#### Run Without Prior Installation
-You can invoke the CLI module directly by setting `PYTHONPATH`:
+#### Continuous Stream Synchronization & Deframing
+Recover messages from unsegmented, noisy bitstreams with leading/trailing noise:
 ```bash
-# Linux / macOS
-PYTHONPATH="." python -m pulselex.cli encode "HELLO"
-
-# Windows PowerShell
-$env:PYTHONPATH="."; python -m pulselex.cli encode "HELLO"
+pulselex sync-decode "..noise..-------..-..-..-..-....-.--------...noise.." --verbose
 ```
 
-### Python API Example
+#### Acoustic CW Audio Synthesis (WAV Export)
+Generate smooth, Hann-shaped 750 Hz audio tones:
+```bash
+pulselex audio "EMERGENCY" -o results/beacon.wav --freq 750 --dot-duration 0.050
+```
+
+### 2. Python API Example
 
 ```python
-from pulselex import encode_text, decode_pulses
+from pulselex import encode_text, decode_pulses, sync_and_decode, text_to_wav
 
-# Encode string into framed 9-pulse blocks
+# 1. Standard encoding & decoding
 stream = encode_text("PULSELEX")
-print(stream)
-
-# Decode stream back to verified string
 recovered = decode_pulses(stream)
-print(recovered)
+
+# 2. Extended SECDED mode with 2-bit error detection
+secded_stream = encode_text("AIR GAP MSG", extended=True)
+recovered_secded = decode_pulses(secded_stream)
+
+# 3. Synchronize continuous bitstream with arbitrary noise
+raw_bitstream = "...noise..." + secded_stream.replace(" ", "") + "---noise---"
+text = sync_and_decode(raw_bitstream, extended=True)
+print("Deframed:", text)
+
+# 4. Synthesize acoustic CW audio WAV file
+wav_path = text_to_wav("SOS", "sos_beacon.wav", frequency_hz=800.0)
+print(f"Audio exported to {wav_path}")
 ```
 
 ---
@@ -206,16 +223,14 @@ python -m pulselex.experiment --trials 50000 --seed 7 --output results/bit_error
 Run the automated test suite using pytest:
 
 ```bash
-# If package is installed via pip:
 pytest
-
-# If running uninstalled from repository root:
-python -m pytest -o pythonpath=.
 ```
 
-The test suite covers:
+The 25 unit tests cover:
 - Exhaustive single-bit error correction across all 32 valid payloads and all 9 bit positions (288 test cases).
-- Full round-trip encoding and decoding across supported symbols and sentences.
+- SECDED single-bit error correction (320 test cases) and exhaustive double-bit error detection (1,440 test cases).
+- Continuous stream synchronization, preamble sliding-window correlation, and noise-boundary deframing.
+- Audio sample synthesis, Hann envelope shaping, and standard 16-bit PCM WAV file header validation.
 - Boundary conditions, probability validation, and channel noiseless/full-noise states.
 
 ---
@@ -247,17 +262,22 @@ PulseLex/
 │   └── pulselex_paper.tex           # LaTeX research paper
 ├── pulselex/
 │   ├── __init__.py                  # Public exports
+│   ├── audio.py                     # Acoustic CW WAV synthesizer
 │   ├── channel.py                   # Binary symmetric channel model
 │   ├── cli.py                       # Command-line interface
-│   ├── codec.py                     # Alphabet mappings & (9,5) codec
-│   └── experiment.py                # Monte Carlo benchmark runner
+│   ├── codec.py                     # Alphabet mappings & (9,5)/(10,5) codec
+│   ├── experiment.py                # Monte Carlo benchmark runner
+│   └── sync.py                      # Continuous bitstream deframer & synchronizer
 ├── results/
 │   ├── bit_error_experiment.csv     # 50,000-trial benchmark results
 │   ├── experiment_summary.txt       # Benchmark summary
 │   └── test_run.txt                 # Recorded test execution log
 ├── tests/
+│   ├── test_audio.py                # Audio waveform unit tests
 │   ├── test_channel.py              # Channel unit tests
-│   └── test_codec.py                # Codec unit tests
+│   ├── test_codec.py                # Codec unit tests
+│   ├── test_secded.py               # SECDED 10-bit unit tests
+│   └── test_sync.py                 # Synchronization & deframing tests
 ├── pyproject.toml                   # Project metadata & build configuration
 ├── references.bib                   # BibTeX bibliographic records
 └── LICENSE                          # MIT License
@@ -267,10 +287,9 @@ PulseLex/
 
 ## Limitations & Scope
 
-- **Channel Realism:** The simulator implements an independent memoryless Binary Symmetric Channel. It does not model burst errors, multipath fading, or continuous pulse timing.
-- **Framing Dependency:** The current decoder expects pre-segmented, whitespace-separated blocks. It does not implement sliding-window preamble detection for unsegmented bitstreams.
-- **Two-Bit Errors:** As with all standard Hamming codes with minimum distance 3, two bit flips within a block produce an active syndrome pointing to an uncorrupted bit, causing miscorrection.
+- **Channel Realism:** The channel simulator implements an independent memoryless Binary Symmetric Channel.
 - **Alphabet Boundary:** The alphabet is restricted to 32 states (uppercase English, space, period, comma, question mark, start, end). Digits and lowercase letters are normalized or rejected.
+- **Acoustic Detection:** The audio module currently synthesizes acoustic waveforms; software-defined microphone tone demodulation is planned for subsequent phases.
 
 ---
 
@@ -280,7 +299,7 @@ Contributions, bug reports, and research extensions are welcome:
 
 1. Fork the repository.
 2. Create a feature branch (`git checkout -b feature/extension-name`).
-3. Ensure all tests pass (`python -m pytest -o pythonpath=.`).
+3. Ensure all tests pass (`pytest`).
 4. Commit your changes with descriptive commit messages.
 5. Open a Pull Request.
 
