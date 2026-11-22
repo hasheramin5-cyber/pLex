@@ -5,7 +5,8 @@ A Morse-inspired fixed-length alphabet with systematic Hamming (9,5) and Extende
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](pyproject.toml)
 [![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue.svg)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-51%20passed-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](tests/)
 
 PulseLex is an experimental telecommunications and coding-theory research prototype. It investigates replacing the variable-length, timing-dependent characters of International Morse code with uniform five-bit payloads, rendering binary states as dot and dash pulses, and applying linear block codes to guarantee single-bit error correction and double-bit error detection.
 
@@ -226,12 +227,14 @@ Run the automated test suite using pytest:
 pytest
 ```
 
-The 25 unit tests cover:
+The 51 unit tests (98% line coverage) cover:
 - Exhaustive single-bit error correction across all 32 valid payloads and all 9 bit positions (288 test cases).
 - SECDED single-bit error correction (320 test cases) and exhaustive double-bit error detection (1,440 test cases).
 - Continuous stream synchronization, preamble sliding-window correlation, and noise-boundary deframing.
 - Audio sample synthesis, Hann envelope shaping, and standard 16-bit PCM WAV file header validation.
-- Boundary conditions, probability validation, and channel noiseless/full-noise states.
+- Command-line interface subcommands (`encode`, `decode`, `sync-decode`, `audio`) and exit code handling.
+- Monte Carlo experiment benchmarking runner and CSV dataset export.
+- Edge cases, parameter boundary checking, and channel noiseless/full-noise states.
 
 ---
 
@@ -253,6 +256,9 @@ pdflatex -output-directory=paper paper/pulselex_paper.tex
 
 ```text
 PulseLex/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                   # Multi-OS, multi-version GitHub Actions CI
 ├── docs/
 │   ├── MATHEMATICAL_QUESTIONS.txt   # Analytical coding theory exercises
 │   ├── PulseLex_Technical_Report.md # Full architectural report (Markdown)
@@ -275,12 +281,16 @@ PulseLex/
 ├── tests/
 │   ├── test_audio.py                # Audio waveform unit tests
 │   ├── test_channel.py              # Channel unit tests
+│   ├── test_cli.py                  # CLI command unit tests
 │   ├── test_codec.py                # Codec unit tests
+│   ├── test_experiment.py           # Experiment runner unit tests
 │   ├── test_secded.py               # SECDED 10-bit unit tests
 │   └── test_sync.py                 # Synchronization & deframing tests
+├── CONTRIBUTING.md                  # Development & contribution guidelines
+├── LICENSE                          # MIT License
 ├── pyproject.toml                   # Project metadata & build configuration
 ├── references.bib                   # BibTeX bibliographic records
-└── LICENSE                          # MIT License
+└── SECURITY.md                     # Security policy & reporting guidelines
 ```
 
 ---

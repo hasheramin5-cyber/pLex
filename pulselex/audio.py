@@ -30,6 +30,12 @@ def synthesize_tone(
     """
     if duration_s <= 0.0:
         return []
+    if frequency_hz <= 0.0:
+        raise ValueError("frequency_hz must be positive")
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+    if not 0.0 <= amplitude <= 1.0:
+        raise ValueError("amplitude must be between 0.0 and 1.0")
 
     num_samples = int(duration_s * sample_rate)
     samples = [0.0] * num_samples
@@ -65,6 +71,8 @@ def synthesize_silence(duration_s: float, sample_rate: int = 44100) -> list[floa
     """Generate silent samples for the given duration."""
     if duration_s <= 0.0:
         return []
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
     return [0.0] * int(duration_s * sample_rate)
 
 
@@ -84,6 +92,9 @@ def pulse_stream_to_audio(
         - '-' (dash): tone active for 3 * dot_duration_s, followed by inter_element_gap_s silence.
         - ' ' (block pause): silence of inter_block_pause_s.
     """
+    if dot_duration_s <= 0.0:
+        raise ValueError("dot_duration_s must be positive")
+
     samples: list[float] = []
     dash_duration_s = 3.0 * dot_duration_s
 

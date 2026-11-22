@@ -1,13 +1,14 @@
 """Command-line interface for PulseLex."""
 
 import argparse
+import sys
 from pathlib import Path
-from .codec import encode_text, decode_pulses
-from .sync import deframe_pulses, sync_and_decode
-from .audio import text_to_wav, pulse_stream_to_audio, export_wav
+from .codec import encode_text, decode_pulses, DoubleErrorDetected
+from .sync import deframe_pulses
+from .audio import text_to_wav
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pulselex", description="Morse-inspired error-correcting alphabet")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -39,39 +40,56 @@ def main() -> None:
     audio_parser.add_argument("--freq", type=float, default=750.0, help="tone frequency in Hz (default: 750.0)")
     audio_parser.add_argument("--dot-duration", type=float, default=0.050, help="dot duration in seconds (default: 0.050)")
 
-    args = parser.parse_args()
+    return parser
 
-    if args.command == "encode":
-        include_markers = not args.no_markers
-        print(encode_text(args.text, include_markers=include_markers, extended=args.extended))
 
-    elif args.command == "decode":
-        expect_markers = not args.no_markers
-        print(decode_pulses(args.stream, expect_markers=expect_markers, extended=args.extended))
+def run_cli(args: argparse.Namespace) -> int:
+    try:
+        if args.command == "encode":
+            include_markers = not args.no_markers
+            print(encode_text(args.text, include_markers=include_markers, extended=args.extended))
 
-    elif args.command == "sync-decode":
-        strict = not args.lenient
-        text, meta = deframe_pulses(
-            args.stream,
-            extended=args.extended,
-            max_start_distance=args.max_start_dist,
-            strict=strict,
-        )
-        print(text)
-        if args.verbose:
-            print("--- Framing Metadata ---")
-            for k, v in meta.items():
-                print(f"{k}: {v}")
+        elif args.command == "decode":
+            expect_markers = not args.no_markers
+            print(decode_pulses(args.stream, expect_markers=expect_markers, extended=args.extended))
 
-    elif args.command == "audio":
-        out_path = text_to_wav(
-            args.text,
-            args.output,
-            extended=args.extended,
-            frequency_hz=args.freq,
-            dot_duration_s=args.dot_duration,
-        )
-        print(f"Exported PulseLex audio: {out_path}")
+        elif args.command == "sync-decode":
+            strict = not args.lenient
+            text, meta = deframe_pulses(
+                args.stream,
+                extended=args.extended,
+                max_start_distance=args.max_start_dist,
+                strict=strict,
+            )
+            print(text)
+            if args.verbose:
+                print("--- Framing Metadata ---")
+                for k, v in meta.items():
+                    print(f"{k}: {v}")
+
+        elif args.command == "audio":
+            out_path = text_to_wav(
+                args.text,
+                args.output,
+                extended=args.extended,
+                frequency_hz=args.freq,
+                dot_duration_s=args.dot_duration,
+            )
+            print(f"Exported PulseLex audio: {out_path}")
+
+        return 0
+
+    except (ValueError, DoubleErrorDetected) as err:
+        sys.stderr.write(f"pulselex error: {err}\n")
+        return 1
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    exit_code = run_cli(args)
+    if exit_code != 0:
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":
