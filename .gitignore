@@ -43,3 +43,5 @@ Thumbs.db
 
 # Generated audio and telemetry artifacts
 *.wav
+
+!docs/demo_sos.wav
